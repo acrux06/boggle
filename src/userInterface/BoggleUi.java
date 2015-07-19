@@ -16,6 +16,11 @@ import java.util.Random;
 import javax.swing.border.TitledBorder;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 /**
@@ -55,8 +60,11 @@ public class BoggleUi implements ActionListener {
     JPanel timerHolder = new JPanel();
     ArrayList wordsFound = new ArrayList();
     public Runnable counter;
-   
-    
+    private final Lock lock = new ReentrantLock();
+    private final Condition condition = lock.newCondition();
+    private final AtomicBoolean isExecuting = new AtomicBoolean(false);
+    private final int N_SECONDS = 60*3; // 3 minutes
+    private final AtomicInteger seconds = new AtomicInteger(N_SECONDS);
     //creating an object to change the font type and size.
     Font font = new Font("Courier", Font.CENTER_BASELINE,36);
                
@@ -64,7 +72,31 @@ public class BoggleUi implements ActionListener {
     public BoggleUi(Board boardData,ArrayList dictionary){
        boardUi = boardData;
        dictionaryUi = dictionary; 
+       counter = new Runnable() {
+            @Override
+            public void run() {
+                while(!isExecuting.get()){
+                    lock.lock();
+                    try {
+                        condition.await();
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(BoggleUi.class.getName()).log(Level.SEVERE, null, ex);
+                    } finally{
+                        lock.unlock();
+                    }
+                }
+                int currentTime = seconds.getAndDecrement();
+                int minutes = currentTime / 60;
+                int seconds = currentTime % 60;
+
+                timer2Label.setText(String.format("       %d:%02d", minutes, seconds));
+                if(currentTime == 0){
+                    isExecuting.set(false);
+                }
+            }
+        };
        initComponents();
+       timer.scheduleAtFixedRate(counter,0,1,TimeUnit.SECONDS);
     }
     
     private void initComponents(){
@@ -212,16 +244,8 @@ public class BoggleUi implements ActionListener {
             userWords.setText("");
             shakeDice.setEnabled(true);
             wordsFound.clear();
-            try {
-                counter.wait();
-            } catch (InterruptedException ex) {
-                Logger.getLogger(BoggleUi.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            catch(IllegalMonitorStateException ex2){
-                
-            }
-            
-            
+            isExecuting.set(false);
+            seconds.set(N_SECONDS);
         }
         else if (action.getActionCommand().equals("Submit")){
             lettersUsed.clear();
@@ -294,24 +318,7 @@ public class BoggleUi implements ActionListener {
                 bDie[i].setEnabled(true);
             ArrayList<String> letters = new ArrayList();
             int[] positions = new int[16];
-            startTime = System.currentTimeMillis();
-            timer = new ScheduledThreadPoolExecutor(1);
-             counter = new Runnable() {
-                    @Override
-                    public void run() {
-                        timer2Label.setText("       "+   (Long.toString((180000-(System.currentTimeMillis() - startTime))/60000))+":"+
-                              Long.toString(((180000-(System.currentTimeMillis()- startTime))%60000)/1000));
-                        if (180000-(System.currentTimeMillis() - startTime)<=0) {
-                            
-                            try {
-                                this.wait();
-                            } catch (InterruptedException ex) {
-                                Logger.getLogger(BoggleUi.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                        }
-                    }
-                };
-             timer.scheduleAtFixedRate(counter,0,1,TimeUnit.SECONDS);
+             
             ArrayList<Die> dice = boardUi.shakeDice();
             for(int i=0; i<16; i++){
                 positions[i]=0;
@@ -340,6 +347,10 @@ public class BoggleUi implements ActionListener {
             score.setText("                0 ");//work on spacing
             timer2Label.setText("");//work on spacing...
             currentWord.setText("");
+            lock.lock();
+            isExecuting.set(true);
+            condition.signal();
+            lock.unlock();
         }
         else {
             int choice=0;
