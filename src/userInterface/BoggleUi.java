@@ -92,9 +92,12 @@ public class BoggleUi implements ActionListener {
                 timer2Label.setText(String.format("       %d:%02d", minutes, seconds));
                 if(currentTime == 0){
                     isExecuting.set(false);
+                   //ending the same, by descativating the option submit.
+                    submitWord.setEnabled(false);
                 }
             }
         };
+       
        initComponents();
        timer.scheduleAtFixedRate(counter,0,1,TimeUnit.SECONDS);
     }
@@ -278,26 +281,26 @@ public class BoggleUi implements ActionListener {
                     //1point
                     if((wordSize == 3)||(wordSize == 4)){
                         scoreTracker = scoreTracker+1; 
-                        score.setText("               "+Integer.toHexString(scoreTracker));
+                        score.setText("               "+Integer.toString(scoreTracker));
                     }
                     //2 points
                     if(wordSize == 5){
                         scoreTracker = scoreTracker+2; 
-                        score.setText("               "+Integer.toHexString(scoreTracker));
+                        score.setText("               "+Integer.toString(scoreTracker));
                     }
                     //three points
                     if(wordSize == 6){
                         scoreTracker = scoreTracker+3; 
-                        score.setText("               "+Integer.toHexString(scoreTracker));
+                        score.setText("               "+Integer.toString(scoreTracker));
                     }
                     if(wordSize == 7){
                         scoreTracker = scoreTracker+5; 
-                       score.setText("               "+Integer.toHexString(scoreTracker));
+                       score.setText("               "+Integer.toString(scoreTracker));
                     }
                     // 11 points
                     if(wordSize >= 8){
                         scoreTracker = scoreTracker+11; 
-                        score.setText("               "+Integer.toHexString(scoreTracker));
+                        score.setText("               "+Integer.toString(scoreTracker));
                     }
                     break;
                 }
@@ -373,7 +376,7 @@ public class BoggleUi implements ActionListener {
                 firstCol=true;         
             if(choice%4==3)
                 lastCol=true;
-            System.out.print(firstRow+""+lastRow+""+firstCol+""+lastCol);
+            
             if(firstCol==true){
                 bDie[choice+1].setEnabled(true);
                 if(firstRow==false){
@@ -437,3 +440,4 @@ public class BoggleUi implements ActionListener {
     }
 }
     
+   
